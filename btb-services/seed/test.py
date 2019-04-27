@@ -15,7 +15,7 @@ if __name__ == "__main__":
     user = users.document(u"stephen").collection(u"transactions")
 
     my_filtered_csv = pd.read_csv(
-        "./missing_transac.csv",
+        "./transactions.csv",
         usecols=["Details", "Company", "Category", "Year", "Value"],
     )
     for i, row in my_filtered_csv.iterrows():
