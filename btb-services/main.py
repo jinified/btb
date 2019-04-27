@@ -225,16 +225,9 @@ def transaction(request):
 
 
 def pushNotify(transactions, body):
-    historicalAvg = getTotalSpending(transactions) / 12.0
-    paymentAvg = body["amount"] / body["duration"]
+    print("Pushed")
     data_message = {
-        "data": {
-            "id": body["id"],
-            "total": body["amount"],
-            "duration": body["duration"],
-            "interest": 2,
-            "payment": 100.00,
-        }
+        "data": body
     }
     message_title = "Loan approved"
     message_body = "Hi, review your loan offer now"
@@ -287,20 +280,21 @@ def loan(request):
         userId = re.match("/(\w+)", request.path).groups()[0]
         body = request.get_json(silent=True)
         id = str(uuid.uuid4())
+        data = {
+            "id": id,
+            "total": body["amount"],
+            "duration": body["duration"],
+            "status": "PENDING",
+            "interest": 2.3,
+            "payment": 300
+        }
         loans = (
             users.document(userId)
             .collection("loans")
             .document(id)
-            .set(
-                {
-                    "total": body["amount"],
-                    "duration": body["duration"],
-                    "status": "PENDING",
-                }
-            )
+            .set(data)
         )
-        body["id"] = id
-        pushNotify(users.document(userId).collection("transactions"), body)
+        pushNotify(users.document(userId).collection("transactions"), data)
         return json.dumps(response, indent=4)
 
 

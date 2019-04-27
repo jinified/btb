@@ -66,4 +66,4 @@ if __name__ == "__main__":
         if week not in weekly_transactions:
             weekly_transactions[week] = {key: 0 for key in categories}
         weekly_transactions[week][categoryId] += value
-    print(weekly_transactions)
+    print(sorted(weekly_transactions.keys()))

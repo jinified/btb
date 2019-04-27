@@ -21,7 +21,7 @@ provider:
   credentials: ./keyfile.json
   environment:
       API_KEY: "AAAAxNpWUWQ:APA91bGcIaD6-UwlX_rqrAJv1eeOf1-s3d50mK-L_yNvg2AXXJIhHZh1kQnJ9kdCd7ULY3k7oavqWnm7UbcOx3hVvK_EBD6R712IOGAo748M-MO_RrjirmKqoIPSYSE98dcM6r75YKBR"
-      REG_ID: "e7OMCvddRgE:APA91bHDstR9R5qgcMEZ6bpCSEsgncOJYNGRVW16LjuAonIC-gmAx-A3MdBeH6TCGTeLuwvNBWwCVcaHhv0KeZv8D5MtyYIb13Wh4g3mFN6zc7kC4-uEBlv9O4XD5fFPJEKhjDDBcf-o"
+      REG_ID: 'ebc-FqQB-EM:APA91bHc8rJ5joH54mTerearchKF6VjW1N_bCrRjJ7A54hDqrvzYe6-aI1fzv0Ykc2haELkWmmeJfiddOPmQJd7KXCnxJP7l2vSQOy1RLo7QLlA7t2hQfvhzVROtDCSFwaydReDSErA1'
 
 functions:
   loan:
