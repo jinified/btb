@@ -8,7 +8,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "serverless-google-cloudfunctions": "^2.1.0"
+  "dependencies": {},
+  "devDependencies": {
+    "serverless-google-cloudfunctions": "^2.3.2"
   }
 }

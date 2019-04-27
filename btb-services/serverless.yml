@@ -1,4 +1,4 @@
-service: btb-services
+service: btb-service
 
 frameworkVersion: ">=1.2.0 <2.0.0"
 
@@ -7,6 +7,8 @@ package:
     - node_modules/**
     - .gitignore
     - .git/**
+    - venv/**
+    - __pycache__/**
 
 plugins:
   - serverless-google-cloudfunctions
@@ -14,11 +16,12 @@ plugins:
 provider:
   name: google
   runtime: python37
-  project: <projectnamehere-1234>
-  credentials: ~/.gcloud/keyfile.json # path must be absolute
+  project: team45
+  region: asia-east2
+  credentials: ./keyfile.json
 
 functions:
   currentTime:
-    handler: endpoint
+    handler: analysis
     events:
       - http: path
