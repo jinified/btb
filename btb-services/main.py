@@ -37,7 +37,7 @@ def getTotalSpending(transactions, categoryId=None):
         return sum(
             [
                 t.to_dict()["value"]
-                for t in transactions.where(u"category", u"==", categoryId).get()
+                for t in transactions.where("category", "==", categoryId).get()
             ]
         )
     return sum([t.to_dict()["value"] for t in transactions.get()])
@@ -56,6 +56,7 @@ def calculateEssentialSavings(transactions, discount=[0.004, 0.01]):
         discount[1] * (totalSpending - 7000) if totalSpending > 7000 else 0
     )
     return initSaving + subsequentSaving
+
 
 def plotEssential(transactions, discount=[0.004, 0.1]):
     accValue = 0
@@ -81,12 +82,12 @@ def plotEssential(transactions, discount=[0.004, 0.1]):
         datetime.strptime(date, "%m-%y").strftime("%y-%m"): v
         for date, v in monthly_transactions.items()
     }
-    actual_monthly_transactions = [x[1] for x in sorted(actual_monthly_transactions.items())]
+    actual_monthly_transactions = [
+        x[1] for x in sorted(actual_monthly_transactions.items())
+    ]
     monthly_transactions = [x[1] for x in sorted(monthly_transactions.items())]
-    return {
-        "actual": actual_monthly_transactions,
-        "expected": monthly_transactions,
-    }
+    return {"actual": actual_monthly_transactions, "expected": monthly_transactions}
+
 
 def plotWise(transactions, maxCat):
     actual_monthly_transactions = {}
@@ -114,6 +115,7 @@ def plotWise(transactions, maxCat):
     monthly_transactions = [x[1] for x in sorted(monthly_transactions.items())]
     return {"actual": actual_monthly_transactions, "expected": monthly_transactions}
 
+
 def saving(request):
     userId = request.path.rsplit("/", 1)[1]
     print(f"Getting saving for {userId}")
@@ -121,14 +123,15 @@ def saving(request):
     scoreWise = calculateWiseSavings(user_transactions)
     scoreEssential = calculateEssentialSavings(user_transactions)
     productId = "wise" if scoreWise >= scoreEssential else "essential"
-    data = plotWise(user_transactions, calcMaxCategory(user_transactions.get())) if productId == 'wise' else plotEssential(user_transactions)
+    data = (
+        plotWise(user_transactions, calcMaxCategory(user_transactions.get()))
+        if productId == "wise"
+        else plotEssential(user_transactions)
+    )
     response = {
         "responseCode": "SUCCESS",
         "responseMessage": "Success",
-        "data": {
-            "productId": productId,
-            "plot": data
-        }
+        "data": {"productId": productId, "plot": data}
         # "data": {
         #     "actual": [10, 23, 30, 45, 52, 60, 78, 85, 92],
         #     "expected": [10, 20, 26, 31, 40, 47, 50, 56, 60],
@@ -154,6 +157,8 @@ def calcMaxCategory(transactions):
         t = doc.to_dict()
         spending[t["category"]] += t["value"]
     return max(spending.items(), key=operator.itemgetter(1))[0]
+
+
 def getTransactionByMonth(docs, month, categoryId):
     def isInMonth(doc, month, categoryId):
         transaction = doc.to_dict()
@@ -208,6 +213,60 @@ def transaction(request):
         # ],
     }
     return json.dumps(response, indent=4)
+
+
+def loan(request):
+    def generateLoanObject(d):
+        obj = d.to_dict()
+        obj["id"] = d.id
+        return obj
+
+    args = re.match("/(\w+)/([\w\d]+)/(\w+)", request.path)
+    if request.method == "GET":
+        userId = re.match("/(\w+)", request.path).groups()[0]
+        loans = users.document(userId).collection("loans").get()
+        loans = [generateLoanObject(d) for d in list(loans)]
+        response = {
+            "responseCode": "SUCCESS",
+            "responseMessage": "Success",
+            "data": loans,
+        }
+        return json.dumps(response, indent=4)
+
+    if request.method == "POST":
+        response = {"responseCode": "SUCCESS", "responseMessage": "Success"}
+        if args and args.groups()[0] == "accept":
+            print("Accepted")
+            loans = (
+                users.document(args.groups()[2])
+                .collection("loans")
+                .document(args.groups()[1])
+                .update({"status": "ACCEPTED"})
+            )
+            return json.dumps(response, indent=4)
+        if args and args.groups()[0] == "reject":
+            loans = (
+                users.document(args.groups()[2])
+                .collection("loans")
+                .document(args.groups()[1])
+                .update({"status": "REJECTED"})
+            )
+            return json.dumps(response, indent=4)
+
+        userId = re.match("/(\w+)", request.path).groups()[0]
+        body = request.get_json(silent=True)
+        loans = (
+            users.document(userId)
+            .collection("loans")
+            .add(
+                {
+                    "total": body["amount"],
+                    "duration": body["duration"],
+                    "status": "PENDING",
+                }
+            )
+        )
+        return json.dumps(response, indent=4)
 
 
 def analysis(request):

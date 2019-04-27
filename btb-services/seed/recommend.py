@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 import operator
 
 
+API_KEY = "AAAAxNpWUWQ:APA91bGcIaD6-UwlX_rqrAJv1eeOf1-s3d50mK-L_yNvg2AXXJIhHZh1kQnJ9kdCd7ULY3k7oavqWnm7UbcOx3hVvK_EBD6R712IOGAo748M-MO_RrjirmKqoIPSYSE98dcM6r75YKBR"
+
 # Use a service account
 cred = credentials.Certificate("../keyfile.json")
 firebase_admin.initialize_app(cred)
@@ -117,6 +119,9 @@ def plotEssential(transactions, discount=[0.004, 0.1]):
 
 
 if __name__ == "__main__":
+    from pyfcm import FCMNotification
+    push_service = FCMNotification(api_key=API_KEY)
+
     categories = [
         "food",
         "bills",
@@ -130,7 +135,3 @@ if __name__ == "__main__":
     ]
     users = db.collection("users")
     user_transactions = users.document(u"stephen").collection(u"transactions")
-    # scoreWise = calculateWiseSavings(user_transactions)
-    # scoreEssential = calculateEssentialSavings(user_transactions)
-    # choice = "wise" if scoreWise >= scoreEssential else "essential"
-    print(plotWise(user_transactions, calcMaxCategory(user_transactions.get())))

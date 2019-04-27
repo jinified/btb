@@ -21,6 +21,10 @@ provider:
   credentials: ./keyfile.json
 
 functions:
+  loan:
+    handler: loan
+    events:
+      - http: path
   analysis:
     handler: analysis
     events:
