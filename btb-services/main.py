@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import re
 from google.cloud import firestore
-from datetime import datetime
+from datetime import datetime, timedelta
 
 categories = [
     "food",
@@ -45,6 +45,26 @@ def saving(request):
     return json.dumps(response, indent=4)
 
 
+def getTransactionByMonth(docs, month, categoryId):
+    def isInMonth(doc, month, categoryId):
+        transaction = doc.to_dict()
+        tMonth = transaction["date"].strftime("%m-%y")
+        return tMonth == month and transaction["category"] == categoryId
+
+    transactionInMonth = [
+        d.to_dict() for d in list(docs) if isInMonth(d, month, categoryId)
+    ]
+    return [
+        {
+            "company": d["company"],
+            "value": d["value"],
+            "details": d["details"],
+            "date": d["date"].strftime("%Y-%m-%d"),
+        }
+        for d in transactionInMonth
+    ]
+
+
 def transaction(request):
     categoryId, month, userId = re.match(
         "/(\w+)/(\d+-\d+)/(\w+)", request.path
@@ -52,29 +72,31 @@ def transaction(request):
     print(
         f"Running analysis for user: {userId} for  category {categoryId} for month {month}"
     )
+    user_transactions = users.document(userId).collection("transactions").get()
     response = {
         "responseCode": "SUCCESS",
         "responseMessage": "Success",
-        "data": [
-            {
-                "company": "Mcdonald",
-                "details": "fried chicken",
-                "date": "2018-05-01",
-                "value": "7.99",
-            },
-            {
-                "company": "KFC",
-                "details": "Zinger",
-                "date": "2018-05-02",
-                "value": "125.9o",
-            },
-            {
-                "details": "Wan Tan Mee",
-                "company": "Kopitiam Ah Seng",
-                "date": "2018-05-03",
-                "value": "52",
-            },
-        ],
+        "data": getTransactionByMonth(user_transactions, month, categoryId)
+        # "data": [
+        #     {
+        #         "company": "Mcdonald",
+        #         "details": "fried chicken",
+        #         "date": "2018-05-01",
+        #         "value": "7.99",
+        #     },
+        #     {
+        #         "company": "KFC",
+        #         "details": "Zinger",
+        #         "date": "2018-05-02",
+        #         "value": "125.9o",
+        #     },
+        #     {
+        #         "details": "Wan Tan Mee",
+        #         "company": "Kopitiam Ah Seng",
+        #         "date": "2018-05-03",
+        #         "value": "52",
+        #     },
+        # ],
     }
     return json.dumps(response, indent=4)
 
@@ -295,161 +317,173 @@ def analysis(request):
         }
         return json.dumps(response, indent=4)
     if mode == "week":
+        weekly_transactions = {}
+        for doc in user_transactions:
+            transaction = doc.to_dict()
+            categoryId = transaction["category"]
+            value = transaction["value"]
+            date = transaction["date"]
+            week = date - timedelta(days=date.weekday())
+            week = date.strftime("%d-%m-%y")
+            if week not in weekly_transactions:
+                weekly_transactions[week] = {key: 0 for key in categories}
+            weekly_transactions[week][categoryId] += value
         response = {
             "responseCode": "SUCCESS",
             "responseMessage": "Success",
-            "data": [
-                {
-                    "label": "02-05-18",
-                    "sum": 512,
-                    "categories": [
-                        {"categoryId": "food", "value": 100},
-                        {"categoryId": "bills", "value": 30},
-                        {"categoryId": "loans", "value": 40},
-                        {"categoryId": "entertainment", "value": 30},
-                        {"categoryId": "shopping", "value": 15},
-                        {"categoryId": "petrol", "value": 70},
-                        {"categoryId": "gifts", "value": 7},
-                        {"categoryId": "health", "value": 80},
-                        {"categoryId": "education", "value": 140},
-                    ],
-                },
-                {
-                    "label": "09-05-18",
-                    "sum": 2135,
-                    "categories": [
-                        {"categoryId": "food", "value": 100},
-                        {"categoryId": "bills", "value": 30},
-                        {"categoryId": "loans", "value": 20},
-                        {"categoryId": "entertainment", "value": 150},
-                        {"categoryId": "shopping", "value": 230},
-                        {"categoryId": "petrol", "value": 80},
-                        {"categoryId": "gifts", "value": 200},
-                        {"categoryId": "health", "value": 25},
-                        {"categoryId": "education", "value": 1300},
-                    ],
-                },
-                {
-                    "label": "16-05-18",
-                    "sum": 2135,
-                    "categories": [
-                        {"categoryId": "food", "value": 900},
-                        {"categoryId": "bills", "value": 340},
-                        {"categoryId": "loans", "value": 250},
-                        {"categoryId": "entertainment", "value": 10},
-                        {"categoryId": "shopping", "value": 240},
-                        {"categoryId": "petrol", "value": 160},
-                        {"categoryId": "gifts", "value": 30},
-                        {"categoryId": "health", "value": 475},
-                        {"categoryId": "education", "value": 250},
-                    ],
-                },
-                {
-                    "label": "23-05-18",
-                    "sum": 5120,
-                    "categories": [
-                        {"categoryId": "food", "value": 1000},
-                        {"categoryId": "bills", "value": 300},
-                        {"categoryId": "loans", "value": 400},
-                        {"categoryId": "entertainment", "value": 300},
-                        {"categoryId": "shopping", "value": 150},
-                        {"categoryId": "petrol", "value": 700},
-                        {"categoryId": "gifts", "value": 70},
-                        {"categoryId": "health", "value": 800},
-                        {"categoryId": "education", "value": 1400},
-                    ],
-                },
-                {
-                    "label": "30-05-18",
-                    "sum": 2135,
-                    "categories": [
-                        {"categoryId": "food", "value": 100},
-                        {"categoryId": "bills", "value": 30},
-                        {"categoryId": "loans", "value": 20},
-                        {"categoryId": "entertainment", "value": 150},
-                        {"categoryId": "shopping", "value": 230},
-                        {"categoryId": "petrol", "value": 80},
-                        {"categoryId": "gifts", "value": 200},
-                        {"categoryId": "health", "value": 25},
-                        {"categoryId": "education", "value": 1300},
-                    ],
-                },
-                {
-                    "label": "07-06-18",
-                    "sum": 2135,
-                    "categories": [
-                        {"categoryId": "food", "value": 900},
-                        {"categoryId": "bills", "value": 340},
-                        {"categoryId": "loans", "value": 250},
-                        {"categoryId": "entertainment", "value": 10},
-                        {"categoryId": "shopping", "value": 240},
-                        {"categoryId": "petrol", "value": 160},
-                        {"categoryId": "gifts", "value": 30},
-                        {"categoryId": "health", "value": 475},
-                        {"categoryId": "education", "value": 250},
-                    ],
-                },
-                {
-                    "label": "14-06-18",
-                    "sum": 3030,
-                    "categories": [
-                        {"categoryId": "food", "value": 1100},
-                        {"categoryId": "bills", "value": 540},
-                        {"categoryId": "loans", "value": 260},
-                        {"categoryId": "entertainment", "value": 50},
-                        {"categoryId": "shopping", "value": 640},
-                        {"categoryId": "petrol", "value": 250},
-                        {"categoryId": "gifts", "value": 0},
-                        {"categoryId": "health", "value": 90},
-                        {"categoryId": "education", "value": 100},
-                    ],
-                },
-                {
-                    "label": "21-06-18",
-                    "sum": 2195,
-                    "categories": [
-                        {"categoryId": "food", "value": 600},
-                        {"categoryId": "bills", "value": 240},
-                        {"categoryId": "loans", "value": 420},
-                        {"categoryId": "entertainment", "value": 200},
-                        {"categoryId": "shopping", "value": 40},
-                        {"categoryId": "petrol", "value": 190},
-                        {"categoryId": "gifts", "value": 130},
-                        {"categoryId": "health", "value": 275},
-                        {"categoryId": "education", "value": 100},
-                    ],
-                },
-                {
-                    "label": "28-06-18",
-                    "sum": 3615,
-                    "categories": [
-                        {"categoryId": "food", "value": 1200},
-                        {"categoryId": "bills", "value": 310},
-                        {"categoryId": "loans", "value": 400},
-                        {"categoryId": "entertainment", "value": 700},
-                        {"categoryId": "shopping", "value": 90},
-                        {"categoryId": "petrol", "value": 460},
-                        {"categoryId": "gifts", "value": 305},
-                        {"categoryId": "health", "value": 100},
-                        {"categoryId": "education", "value": 50},
-                    ],
-                },
-                {
-                    "label": "05-07-18",
-                    "sum": 3015,
-                    "categories": [
-                        {"categoryId": "food", "value": 770},
-                        {"categoryId": "bills", "value": 450},
-                        {"categoryId": "loans", "value": 450},
-                        {"categoryId": "entertainment", "value": 280},
-                        {"categoryId": "shopping", "value": 200},
-                        {"categoryId": "petrol", "value": 100},
-                        {"categoryId": "gifts", "value": 390},
-                        {"categoryId": "health", "value": 85},
-                        {"categoryId": "education", "value": 290},
-                    ],
-                },
-            ],
+            "data": generateMonthAggregate(weekly_transactions)
+            # "data": [
+            #     {
+            #         "label": "02-05-18",
+            #         "sum": 512,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 100},
+            #             {"categoryId": "bills", "value": 30},
+            #             {"categoryId": "loans", "value": 40},
+            #             {"categoryId": "entertainment", "value": 30},
+            #             {"categoryId": "shopping", "value": 15},
+            #             {"categoryId": "petrol", "value": 70},
+            #             {"categoryId": "gifts", "value": 7},
+            #             {"categoryId": "health", "value": 80},
+            #             {"categoryId": "education", "value": 140},
+            #         ],
+            #     },
+            #     {
+            #         "label": "09-05-18",
+            #         "sum": 2135,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 100},
+            #             {"categoryId": "bills", "value": 30},
+            #             {"categoryId": "loans", "value": 20},
+            #             {"categoryId": "entertainment", "value": 150},
+            #             {"categoryId": "shopping", "value": 230},
+            #             {"categoryId": "petrol", "value": 80},
+            #             {"categoryId": "gifts", "value": 200},
+            #             {"categoryId": "health", "value": 25},
+            #             {"categoryId": "education", "value": 1300},
+            #         ],
+            #     },
+            #     {
+            #         "label": "16-05-18",
+            #         "sum": 2135,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 900},
+            #             {"categoryId": "bills", "value": 340},
+            #             {"categoryId": "loans", "value": 250},
+            #             {"categoryId": "entertainment", "value": 10},
+            #             {"categoryId": "shopping", "value": 240},
+            #             {"categoryId": "petrol", "value": 160},
+            #             {"categoryId": "gifts", "value": 30},
+            #             {"categoryId": "health", "value": 475},
+            #             {"categoryId": "education", "value": 250},
+            #         ],
+            #     },
+            #     {
+            #         "label": "23-05-18",
+            #         "sum": 5120,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 1000},
+            #             {"categoryId": "bills", "value": 300},
+            #             {"categoryId": "loans", "value": 400},
+            #             {"categoryId": "entertainment", "value": 300},
+            #             {"categoryId": "shopping", "value": 150},
+            #             {"categoryId": "petrol", "value": 700},
+            #             {"categoryId": "gifts", "value": 70},
+            #             {"categoryId": "health", "value": 800},
+            #             {"categoryId": "education", "value": 1400},
+            #         ],
+            #     },
+            #     {
+            #         "label": "30-05-18",
+            #         "sum": 2135,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 100},
+            #             {"categoryId": "bills", "value": 30},
+            #             {"categoryId": "loans", "value": 20},
+            #             {"categoryId": "entertainment", "value": 150},
+            #             {"categoryId": "shopping", "value": 230},
+            #             {"categoryId": "petrol", "value": 80},
+            #             {"categoryId": "gifts", "value": 200},
+            #             {"categoryId": "health", "value": 25},
+            #             {"categoryId": "education", "value": 1300},
+            #         ],
+            #     },
+            #     {
+            #         "label": "07-06-18",
+            #         "sum": 2135,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 900},
+            #             {"categoryId": "bills", "value": 340},
+            #             {"categoryId": "loans", "value": 250},
+            #             {"categoryId": "entertainment", "value": 10},
+            #             {"categoryId": "shopping", "value": 240},
+            #             {"categoryId": "petrol", "value": 160},
+            #             {"categoryId": "gifts", "value": 30},
+            #             {"categoryId": "health", "value": 475},
+            #             {"categoryId": "education", "value": 250},
+            #         ],
+            #     },
+            #     {
+            #         "label": "14-06-18",
+            #         "sum": 3030,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 1100},
+            #             {"categoryId": "bills", "value": 540},
+            #             {"categoryId": "loans", "value": 260},
+            #             {"categoryId": "entertainment", "value": 50},
+            #             {"categoryId": "shopping", "value": 640},
+            #             {"categoryId": "petrol", "value": 250},
+            #             {"categoryId": "gifts", "value": 0},
+            #             {"categoryId": "health", "value": 90},
+            #             {"categoryId": "education", "value": 100},
+            #         ],
+            #     },
+            #     {
+            #         "label": "21-06-18",
+            #         "sum": 2195,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 600},
+            #             {"categoryId": "bills", "value": 240},
+            #             {"categoryId": "loans", "value": 420},
+            #             {"categoryId": "entertainment", "value": 200},
+            #             {"categoryId": "shopping", "value": 40},
+            #             {"categoryId": "petrol", "value": 190},
+            #             {"categoryId": "gifts", "value": 130},
+            #             {"categoryId": "health", "value": 275},
+            #             {"categoryId": "education", "value": 100},
+            #         ],
+            #     },
+            #     {
+            #         "label": "28-06-18",
+            #         "sum": 3615,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 1200},
+            #             {"categoryId": "bills", "value": 310},
+            #             {"categoryId": "loans", "value": 400},
+            #             {"categoryId": "entertainment", "value": 700},
+            #             {"categoryId": "shopping", "value": 90},
+            #             {"categoryId": "petrol", "value": 460},
+            #             {"categoryId": "gifts", "value": 305},
+            #             {"categoryId": "health", "value": 100},
+            #             {"categoryId": "education", "value": 50},
+            #         ],
+            #     },
+            #     {
+            #         "label": "05-07-18",
+            #         "sum": 3015,
+            #         "categories": [
+            #             {"categoryId": "food", "value": 770},
+            #             {"categoryId": "bills", "value": 450},
+            #             {"categoryId": "loans", "value": 450},
+            #             {"categoryId": "entertainment", "value": 280},
+            #             {"categoryId": "shopping", "value": 200},
+            #             {"categoryId": "petrol", "value": 100},
+            #             {"categoryId": "gifts", "value": 390},
+            #             {"categoryId": "health", "value": 85},
+            #             {"categoryId": "education", "value": 290},
+            #         ],
+            #     },
+            # ],
         }
         return json.dumps(response, indent=4)
 

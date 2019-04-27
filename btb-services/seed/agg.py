@@ -2,7 +2,7 @@ import pandas as pd
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Use a service account
 cred = credentials.Certificate('../keyfile.json')
@@ -23,19 +23,20 @@ def generateMonthAggregate(monthly_transactions):
     return [generateMonthObject(k, v) for k,v in monthly_transactions.items()]
 
 
+def getTransactionByMonth(docs, month, categoryId):
+
+    def isInMonth(doc, month, categoryId):
+        transaction = doc.to_dict()
+        tMonth = transaction['date'].strftime('%m-%y')
+        return tMonth == month and transaction['category'] == categoryId
+
+    transactionInMonth = [d.to_dict() for d in list(docs) if isInMonth(d, month,categoryId)]
+    return [{"company": d['company'], "value": d["value"], "details": d['details'], "date": d["date"].strftime('%Y-%m-%d')} for d in transactionInMonth]
+
+
 if __name__ == "__main__":
     categories = ['food', 'bills', 'loans', 'entertainment', 'shopping', 'petrol', 'gifts', 'health', 'education']
-    monthly_transactions = {}
+    weekly_transactions = {}
     users = db.collection("users")
-    
     user_transactions = users.document(u"stephen").collection(u"transactions").get()
-    for doc in user_transactions:
-        transaction = doc.to_dict()
-        categoryId = transaction['category']
-        value = transaction['value']
-        date = transaction['date']
-        month = date.strftime('%m-%y')
-        if month not in monthly_transactions:
-            monthly_transactions[month] = {key: 0 for key in categories}
-        monthly_transactions[month][categoryId] += value
-    print(generateMonthAggregate(monthly_transactions))
+    print(getTransactionByMonth(user_transactions, '05-18', 'food'))
