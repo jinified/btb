@@ -8,6 +8,8 @@ import operator
 
 API_KEY = "AAAAxNpWUWQ:APA91bGcIaD6-UwlX_rqrAJv1eeOf1-s3d50mK-L_yNvg2AXXJIhHZh1kQnJ9kdCd7ULY3k7oavqWnm7UbcOx3hVvK_EBD6R712IOGAo748M-MO_RrjirmKqoIPSYSE98dcM6r75YKBR"
 
+REG_ID = "e7OMCvddRgE:APA91bHDstR9R5qgcMEZ6bpCSEsgncOJYNGRVW16LjuAonIC-gmAx-A3MdBeH6TCGTeLuwvNBWwCVcaHhv0KeZv8D5MtyYIb13Wh4g3mFN6zc7kC4-uEBlv9O4XD5fFPJEKhjDDBcf-o"
+
 # Use a service account
 cred = credentials.Certificate("../keyfile.json")
 firebase_admin.initialize_app(cred)
@@ -120,18 +122,10 @@ def plotEssential(transactions, discount=[0.004, 0.1]):
 
 if __name__ == "__main__":
     from pyfcm import FCMNotification
-    push_service = FCMNotification(api_key=API_KEY)
 
-    categories = [
-        "food",
-        "bills",
-        "loans",
-        "entertainment",
-        "shopping",
-        "petrol",
-        "gifts",
-        "health",
-        "education",
-    ]
-    users = db.collection("users")
-    user_transactions = users.document(u"stephen").collection(u"transactions")
+    push_service = FCMNotification(api_key=API_KEY)
+    message_title = "Uber update"
+message_body = "Hi john, your customized news for today is ready"
+result = push_service.notify_single_device(
+    registration_id=REG_ID, message_title=message_title, message_body=message_body
+)

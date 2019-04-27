@@ -19,6 +19,9 @@ provider:
   project: team45
   region: asia-east2
   credentials: ./keyfile.json
+  environment:
+      API_KEY: "AAAAxNpWUWQ:APA91bGcIaD6-UwlX_rqrAJv1eeOf1-s3d50mK-L_yNvg2AXXJIhHZh1kQnJ9kdCd7ULY3k7oavqWnm7UbcOx3hVvK_EBD6R712IOGAo748M-MO_RrjirmKqoIPSYSE98dcM6r75YKBR"
+      REG_ID: "e7OMCvddRgE:APA91bHDstR9R5qgcMEZ6bpCSEsgncOJYNGRVW16LjuAonIC-gmAx-A3MdBeH6TCGTeLuwvNBWwCVcaHhv0KeZv8D5MtyYIb13Wh4g3mFN6zc7kC4-uEBlv9O4XD5fFPJEKhjDDBcf-o"
 
 functions:
   loan:

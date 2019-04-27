@@ -6,7 +6,14 @@ import pandas as pd
 import re
 from google.cloud import firestore
 from datetime import datetime, timedelta
+from pyfcm import FCMNotification
 import operator
+import os
+import uuid
+
+API_KEY = "AAAAxNpWUWQ:APA91bGcIaD6-UwlX_rqrAJv1eeOf1-s3d50mK-L_yNvg2AXXJIhHZh1kQnJ9kdCd7ULY3k7oavqWnm7UbcOx3hVvK_EBD6R712IOGAo748M-MO_RrjirmKqoIPSYSE98dcM6r75YKBR"
+
+REG_ID = "e7OMCvddRgE:APA91bHDstR9R5qgcMEZ6bpCSEsgncOJYNGRVW16LjuAonIC-gmAx-A3MdBeH6TCGTeLuwvNBWwCVcaHhv0KeZv8D5MtyYIb13Wh4g3mFN6zc7kC4-uEBlv9O4XD5fFPJEKhjDDBcf-o"
 
 categories = [
     "food",
@@ -19,8 +26,10 @@ categories = [
     "health",
     "education",
 ]
+
 db = firestore.Client()
 users = db.collection("users")
+push_service = FCMNotification(api_key=API_KEY)
 
 
 def generateMonthAggregate(monthly_transactions):
@@ -215,13 +224,35 @@ def transaction(request):
     return json.dumps(response, indent=4)
 
 
+def pushNotify(transactions, body):
+    historicalAvg = getTotalSpending(transactions) / 12.0
+    paymentAvg = body["amount"] / body["duration"]
+    data_message = {
+        "data": {
+            "id": body["id"],
+            "total": body["amount"],
+            "duration": body["duration"],
+            "interest": 2,
+            "payment": 100.00,
+        }
+    }
+    message_title = "Loan approved"
+    message_body = "Hi, review your loan offer now"
+    push_service.notify_single_device(
+        registration_id=os.environ["REG_ID"],
+        message_title=message_title,
+        message_body=message_body,
+        data_message=data_message,
+    )
+
+
 def loan(request):
     def generateLoanObject(d):
         obj = d.to_dict()
         obj["id"] = d.id
         return obj
 
-    args = re.match("/(\w+)/([\w\d]+)/(\w+)", request.path)
+    args = re.match("/(\w+)/([\w\d-]+)/(\w+)", request.path)
     if request.method == "GET":
         userId = re.match("/(\w+)", request.path).groups()[0]
         loans = users.document(userId).collection("loans").get()
@@ -255,10 +286,12 @@ def loan(request):
 
         userId = re.match("/(\w+)", request.path).groups()[0]
         body = request.get_json(silent=True)
+        id = str(uuid.uuid4())
         loans = (
             users.document(userId)
             .collection("loans")
-            .add(
+            .document(id)
+            .set(
                 {
                     "total": body["amount"],
                     "duration": body["duration"],
@@ -266,6 +299,8 @@ def loan(request):
                 }
             )
         )
+        body["id"] = id
+        pushNotify(users.document(userId).collection("transactions"), body)
         return json.dumps(response, indent=4)
 
 
