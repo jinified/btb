@@ -6,6 +6,7 @@ import pandas as pd
 import re
 from google.cloud import firestore
 from datetime import datetime, timedelta
+import operator
 
 categories = [
     "food",
