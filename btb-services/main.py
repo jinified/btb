@@ -32,20 +32,128 @@ def generateMonthAggregate(monthly_transactions):
     return [generateMonthObject(k, v) for k, v in monthly_transactions.items()]
 
 
+def getTotalSpending(transactions, categoryId=None):
+    if categoryId:
+        return sum(
+            [
+                t.to_dict()["value"]
+                for t in transactions.where(u"category", u"==", categoryId).get()
+            ]
+        )
+    return sum([t.to_dict()["value"] for t in transactions.get()])
+
+
+def calculateWiseSavings(transactions):
+    maxCat = calcMaxCategory(transactions.get())
+    total_maxCat_spending = getTotalSpending(transactions, maxCat)
+    return 0.1 * total_maxCat_spending
+
+
+def calculateEssentialSavings(transactions, discount=[0.004, 0.01]):
+    totalSpending = getTotalSpending(transactions)
+    initSaving = discount[0] * min(totalSpending, 7000)
+    subsequentSaving = (
+        discount[1] * (totalSpending - 7000) if totalSpending > 7000 else 0
+    )
+    return initSaving + subsequentSaving
+
+def plotEssential(transactions, discount=[0.004, 0.1]):
+    accValue = 0
+    actual_monthly_transactions = {}
+    monthly_transactions = {}
+    for doc in transactions.get():
+        t = doc.to_dict()
+        month = t["date"].strftime("%m-%y")
+        value = t["value"]
+        accValue += value
+        if month not in actual_monthly_transactions:
+            monthly_transactions[month] = 0
+            actual_monthly_transactions[month] = 0
+        monthly_transactions[month] += (
+            0.996 * value if accValue <= 7000 else 0.99 * value
+        )
+        actual_monthly_transactions[month] += value
+    actual_monthly_transactions = {
+        datetime.strptime(date, "%m-%y").strftime("%y-%m"): v
+        for date, v in actual_monthly_transactions.items()
+    }
+    monthly_transactions = {
+        datetime.strptime(date, "%m-%y").strftime("%y-%m"): v
+        for date, v in monthly_transactions.items()
+    }
+    actual_monthly_transactions = [x[1] for x in sorted(actual_monthly_transactions.items())]
+    monthly_transactions = [x[1] for x in sorted(monthly_transactions.items())]
+    return {
+        "actual": actual_monthly_transactions,
+        "expected": monthly_transactions,
+    }
+
+def plotWise(transactions, maxCat):
+    actual_monthly_transactions = {}
+    monthly_transactions = {}
+    for doc in transactions.get():
+        t = doc.to_dict()
+        month = t["date"].strftime("%m-%y")
+        value = t["value"]
+        if month not in actual_monthly_transactions:
+            monthly_transactions[month] = 0
+            actual_monthly_transactions[month] = 0
+        monthly_transactions[month] += value if t["category"] != maxCat else 0.9 * value
+        actual_monthly_transactions[month] += value
+    actual_monthly_transactions = {
+        datetime.strptime(date, "%m-%y").strftime("%y-%m"): v
+        for date, v in actual_monthly_transactions.items()
+    }
+    monthly_transactions = {
+        datetime.strptime(date, "%m-%y").strftime("%y-%m"): v
+        for date, v in monthly_transactions.items()
+    }
+    actual_monthly_transactions = [
+        x[1] for x in sorted(actual_monthly_transactions.items())
+    ]
+    monthly_transactions = [x[1] for x in sorted(monthly_transactions.items())]
+    return {"actual": actual_monthly_transactions, "expected": monthly_transactions}
+
 def saving(request):
     userId = request.path.rsplit("/", 1)[1]
     print(f"Getting saving for {userId}")
+    user_transactions = users.document(userId).collection("transactions")
+    scoreWise = calculateWiseSavings(user_transactions)
+    scoreEssential = calculateEssentialSavings(user_transactions)
+    productId = "wise" if scoreWise >= scoreEssential else "essential"
+    data = plotWise(user_transactions, calcMaxCategory(user_transactions.get())) if productId == 'wise' else plotEssential(user_transactions)
     response = {
         "responseCode": "SUCCESS",
         "responseMessage": "Success",
         "data": {
-            "actual": [10, 23, 30, 45, 52, 60, 78, 85, 92],
-            "expected": [10, 20, 26, 31, 40, 47, 50, 56, 60],
-        },
+            "productId": productId,
+            "plot": data
+        }
+        # "data": {
+        #     "actual": [10, 23, 30, 45, 52, 60, 78, 85, 92],
+        #     "expected": [10, 20, 26, 31, 40, 47, 50, 56, 60],
+        # },
     }
     return json.dumps(response, indent=4)
 
 
+def calcMaxCategory(transactions):
+    categories = [
+        "food",
+        "bills",
+        "loans",
+        "entertainment",
+        "shopping",
+        "petrol",
+        "gifts",
+        "health",
+        "education",
+    ]
+    spending = {key: 0 for key in categories}
+    for doc in transactions:
+        t = doc.to_dict()
+        spending[t["category"]] += t["value"]
+    return max(spending.items(), key=operator.itemgetter(1))[0]
 def getTransactionByMonth(docs, month, categoryId):
     def isInMonth(doc, month, categoryId):
         transaction = doc.to_dict()
