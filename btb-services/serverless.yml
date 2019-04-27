@@ -21,7 +21,15 @@ provider:
   credentials: ./keyfile.json
 
 functions:
-  currentTime:
+  analysis:
     handler: analysis
+    events:
+      - http: path
+  transaction:
+    handler: transaction
+    events:
+      - http: path
+  saving:
+    handler: saving
     events:
       - http: path
