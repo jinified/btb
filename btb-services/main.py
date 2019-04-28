@@ -224,11 +224,9 @@ def transaction(request):
     return json.dumps(response, indent=4)
 
 
-def pushNotify(transactions, body):
+def pushNotify(body):
     print("Pushed")
-    data_message = {
-        "data": body
-    }
+    data_message = {"data": body}
     message_title = "Loan approved"
     message_body = "Hi, review your loan offer now"
     push_service.notify_single_device(
@@ -237,6 +235,11 @@ def pushNotify(transactions, body):
         message_body=message_body,
         data_message=data_message,
     )
+
+
+def compound_interest(principle, rate, time):
+    CI = principle * (pow((1 + rate / 100), time))
+    return CI
 
 
 def loan(request):
@@ -280,21 +283,29 @@ def loan(request):
         userId = re.match("/(\w+)", request.path).groups()[0]
         body = request.get_json(silent=True)
         id = str(uuid.uuid4())
+        transactions = users.document(userId).collection("transactions")
+        avgSpending = getTotalSpending(transactions) / 12.0
+        expectedPayment = float(body["amount"]) / float(body["duration"])
+        buffer = expectedPayment - avgSpending
+        interest = round(
+            9
+            + ((float(body["duration"]) / 20) * 5.0)
+            + (buffer / expectedPayment * 2.0),
+            2,
+        )
         data = {
             "id": id,
             "total": body["amount"],
             "duration": body["duration"],
             "status": "PENDING",
-            "interest": 2.3,
-            "payment": 300
+            "interest": interest,
+            "payment": compound_interest(
+                float(body["amount"]), interest, float(body["duration"])
+            )
+            / (float(body["duration"]) * 12),
         }
-        loans = (
-            users.document(userId)
-            .collection("loans")
-            .document(id)
-            .set(data)
-        )
-        pushNotify(users.document(userId).collection("transactions"), data)
+        loans = users.document(userId).collection("loans").document(id).set(data)
+        pushNotify(data)
         return json.dumps(response, indent=4)
 
 
