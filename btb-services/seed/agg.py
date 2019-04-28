@@ -56,13 +56,13 @@ if __name__ == "__main__":
     users = db.collection("users")
     user_transactions = users.document(u"stephen").collection(u"transactions").get()
     weekly_transactions = {}
+    weeks = []
     for doc in user_transactions:
         transaction = doc.to_dict()
         categoryId = transaction["category"]
         value = transaction["value"]
         date = transaction["date"]
-        week = date - timedelta(days=date.weekday())
-        week = date.strftime("%d-%m-%y")
+        week = date.strftime("%V-%y")
         if week not in weekly_transactions:
             weekly_transactions[week] = {key: 0 for key in categories}
         weekly_transactions[week][categoryId] += value

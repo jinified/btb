@@ -531,8 +531,7 @@ def analysis(request):
             categoryId = transaction["category"]
             value = transaction["value"]
             date = transaction["date"]
-            week = date - timedelta(days=date.weekday())
-            week = date.strftime("%d-%m-%y")
+            week = date.strftime("%V-%y")
             if week not in weekly_transactions:
                 weekly_transactions[week] = {key: 0 for key in categories}
             weekly_transactions[week][categoryId] += value
